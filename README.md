@@ -4,7 +4,7 @@ Bem Vindo(a) ao nosso projeto, o Block Fall.
 
 Um projeto desenvolvido em C, para a disciplina de Programação Imperativa e Funcional.
 
-# 👥| Integrantes do grupo
+# Contribuidores
 
 João Neri - @JoaoNerii
 
