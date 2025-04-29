@@ -10,7 +10,7 @@ João Neri - @JoaoNerii
 
 Pedro Bastos - @Pedropbastos
 
-Lucas Sereno - 
+Lucas Sereno - @LNSereno
 
 Lucas Canto - @Lucascs88
 
