@@ -1,135 +1,120 @@
 #include "tetris.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <termios.h>
-#include <fcntl.h>
 
-#define BOARD_OFFSET_X 5
-#define BOARD_OFFSET_Y 2
-#define BLOCK_SIZE 2
+void initDisplay() {
+    screenInit(1);
+    keyboardInit();
+    screenHideCursor();
+    screenClear();
+}
 
-void draw_game(const GameState *game) {
-    cli_clear();
+void drawBlock(int x, int y, int shape[4][4], int color) {
+    for (int dy = 0; dy < 4; dy++) {
+        for (int dx = 0; dx < 4; dx++) {
+            if (shape[dy][dx]) {
+                screenGotoxy(x + dx, y + dy);
+                screenSetColor(color, BLACK);
+                printf("%c", BOX_BLOCK);
+            }
+        }
+    }
+}
+
+void drawBoard(GameState *game) {
+    screenBoxEnable();
+    for (int x = BOARD_START_X - 1; x < BOARD_START_X + BOARD_WIDTH + 1; x++) {
+        screenGotoxy(x, BOARD_START_Y - 1);
+        printf("%c", BOX_HLINE);
+        screenGotoxy(x, BOARD_START_Y + BOARD_HEIGHT);
+        printf("%c", BOX_HLINE);
+    }
+    
+    for (int y = BOARD_START_Y; y < BOARD_START_Y + BOARD_HEIGHT; y++) {
+        screenGotoxy(BOARD_START_X - 1, y);
+        printf("%c", BOX_VLINE);
+        screenGotoxy(BOARD_START_X + BOARD_WIDTH, y);
+        printf("%c", BOX_VLINE);
+    }
+    
+    screenGotoxy(BOARD_START_X - 1, BOARD_START_Y - 1);
+    printf("%c", BOX_UPLEFT);
+    screenGotoxy(BOARD_START_X + BOARD_WIDTH, BOARD_START_Y - 1);
+    printf("%c", BOX_UPRIGHT);
+    screenGotoxy(BOARD_START_X - 1, BOARD_START_Y + BOARD_HEIGHT);
+    printf("%c", BOX_DWNLEFT);
+    screenGotoxy(BOARD_START_X + BOARD_WIDTH, BOARD_START_Y + BOARD_HEIGHT);
+    printf("%c", BOX_DWNRIGHT);
+    screenBoxDisable();
     
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
-            if (game->board[y][x] != 0) {
-                cli_set_color(game->board[y][x]);
-                cli_draw_rect(BOARD_OFFSET_X + x * BLOCK_SIZE, 
-                             BOARD_OFFSET_Y + y, 
-                             BLOCK_SIZE, 1, true);
-                cli_reset_color();
+            if (game->board[y][x]) {
+                screenGotoxy(BOARD_START_X + x, BOARD_START_Y + y);
+                screenSetColor(game->board[y][x], BLACK);
+                printf("%c", BOX_BLOCK);
             }
         }
     }
     
-    cli_set_color(game->current_piece.color);
-    for (int i = 0; i < 4; i++) {
-        int x = game->current_piece.blocks[i].x;
-        int y = game->current_piece.blocks[i].y;
-        
-        if (y >= 0) {
-            cli_draw_rect(BOARD_OFFSET_X + x * BLOCK_SIZE, 
-                         BOARD_OFFSET_Y + y, 
-                         BLOCK_SIZE, 1, true);
+    drawBlock(BOARD_START_X + game->currentBlock.x, 
+              BOARD_START_Y + game->currentBlock.y, 
+              game->currentBlock.shape, 
+              game->currentBlock.type + 1);
+}
+
+void drawNextBlock(GameState *game) {
+    screenGotoxy(NEXT_BLOCK_X, NEXT_BLOCK_Y);
+    screenSetColor(WHITE, BLACK);
+    printf("Next Block:");
+    
+    for (int y = 1; y < 5; y++) {
+        for (int x = 0; x < 6; x++) {
+            screenGotoxy(NEXT_BLOCK_X + x, NEXT_BLOCK_Y + y);
+            printf(" ");
         }
     }
-    cli_reset_color();
     
-    cli_set_color(CLI_WHITE);
-    cli_draw_rect(BOARD_OFFSET_X - 1, BOARD_OFFSET_Y - 1, 
-                 BOARD_WIDTH * BLOCK_SIZE + 2, BOARD_HEIGHT + 2, false);
-    
-    cli_move_cursor(BOARD_OFFSET_X + BOARD_WIDTH * BLOCK_SIZE + 5, BOARD_OFFSET_Y);
+    drawBlock(NEXT_BLOCK_X + 1, NEXT_BLOCK_Y + 1, game->nextBlock.shape, game->nextBlock.type + 1);
+}
+
+void drawScore(GameState *game) {
+    screenGotoxy(NEXT_BLOCK_X, NEXT_BLOCK_Y + 6);
+    screenSetColor(WHITE, BLACK);
     printf("Score: %d", game->score);
     
-    cli_move_cursor(BOARD_OFFSET_X + BOARD_WIDTH * BLOCK_SIZE + 5, BOARD_OFFSET_Y + 2);
+    screenGotoxy(NEXT_BLOCK_X, NEXT_BLOCK_Y + 7);
     printf("Level: %d", game->level);
-    
-    cli_move_cursor(BOARD_OFFSET_X + BOARD_WIDTH * BLOCK_SIZE + 5, BOARD_OFFSET_Y + 4);
-    printf("Next:");
-    
-    for (int i = 0; i < 4; i++) {
-        int x = game->next_piece.blocks[i].x - (BOARD_WIDTH / 2 - 2);
-        int y = game->next_piece.blocks[i].y + 6;
-        
-        cli_set_color(game->next_piece.color);
-        cli_draw_rect(BOARD_OFFSET_X + BOARD_WIDTH * BLOCK_SIZE + 5 + x * BLOCK_SIZE, 
-                     BOARD_OFFSET_Y + y, 
-                     BLOCK_SIZE, 1, true);
-    }
-    cli_reset_color();
-    
-    cli_refresh();
 }
 
-void process_input(GameState *game, int key) {
-    switch (key) {
-        case 'a':
-            move_piece(game, -1, 0);
-            break;
-        case 'd':
-            move_piece(game, 1, 0);
-            break;
-        case 's':
-            move_piece(game, 0, 1);
-            break;
-        case 'w':
-            rotate_piece(game);
-            break;
-        case ' ':
-            while (move_piece(game, 0, 1)) {
-                game->score++;
-            }
-            lock_piece(game);
-            clear_lines(game);
-            break;
-    }
-}
-
-void run_game() {
-    GameState game;
-    init_game(&game);
-    
-    struct termios oldt, newt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL) | O_NONBLOCK);
-    
-    cli_init();
-    cli_hide_cursor();
-    
-    int frame_count = 0;
-    int frames_per_drop = 30;
-    
-    while (!game.game_over) {
-        int key = getchar();
-        if (key != EOF) {
-            process_input(&game, key);
-        }
-        
-        if (frame_count % (frames_per_drop / game.level) == 0) {
-            update_game(&game);
-        }
-        
-        draw_game(&game);
-        
-        usleep(1000000 / 60);
-        frame_count++;
-    }
-    
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    
-    cli_move_cursor(BOARD_OFFSET_X + BOARD_WIDTH / 2 - 5, BOARD_OFFSET_Y + BOARD_HEIGHT / 2);
+void drawGameOver() {
+    screenGotoxy(BOARD_START_X + BOARD_WIDTH/2 - 4, BOARD_START_Y + BOARD_HEIGHT/2);
+    screenSetColor(RED, BLACK);
     printf("GAME OVER!");
-    cli_move_cursor(BOARD_OFFSET_X + BOARD_WIDTH / 2 - 8, BOARD_OFFSET_Y + BOARD_HEIGHT / 2 + 1);
-    printf("Final Score: %d", game.score);
-    cli_refresh();
-    
-    sleep(3);
-    
-    cli_show_cursor();
-    cli_end();
+}
+
+void handleInput(GameState *game) {
+    if (keyhit()) {
+        int ch = readch();
+        
+        switch (ch) {
+            case KEY_LEFT:
+                moveBlock(game, -1, 0);
+                break;
+            case KEY_RIGHT:
+                moveBlock(game, 1, 0);
+                break;
+            case KEY_DOWN:
+                moveBlock(game, 0, 1);
+                break;
+            case KEY_ROTATE:
+                rotateBlock(game);
+                break;
+            case KEY_PAUSE:
+                while (!keyhit()) {}
+                readch();
+                break;
+            case KEY_QUIT:
+                game->gameOver = 1;
+                break;
+        }
+    }
 }
