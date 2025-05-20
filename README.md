@@ -44,7 +44,10 @@ Ao final de cada partida, sua pontuação é comparada com o top 10
 O ranking é salvo automaticamente no arquivo ranking.txt
 
 ### 👥 Contribuidores
-Nome - Email - GitHub
-João Neri	- jgsn@cesar.school	- JoaoNerii
-Pedro Pessoa	- ppb2@cesar.school -	Pedropbastos
-Lucas Canto	- lcss@cesar.school	- Lucascs88
+## Nome - Email - GitHub
+
+```João Neri - jgsn@cesar.school - JoaoNerii```
+
+```Pedro Pessoa - ppb2@cesar.school - Pedropbastos```
+
+```Lucas Canto - lcss@cesar.school - Lucascs88```
