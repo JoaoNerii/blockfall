@@ -1,0 +1,4 @@
+João Neri 20000
+Pedro Pessoa 1000
+Lucas Canto 300
+Lucas Sereno 100
